@@ -7,11 +7,11 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 
-class Cube:
+class Node:
     def __init__(self, cube_dict: Dict[str, list]) -> None:
         self.cube_dict = cube_dict
 
-    def draw_cube(self, ax: plt.axes.Axes) -> None:
+    def draw_box(self, ax) -> None:
         xs = self.cube_dict["start"][0]
         ys = self.cube_dict["start"][1]
         zs = self.cube_dict["start"][2]
@@ -58,10 +58,7 @@ class Cube:
             y.append(point[1])
             z.append(point[2])
 
-        r = np.array(x)
-        s = np.array(y)
-        t = np.array(z)
-        ax.plot3D(r, s, t)
+        ax.plot3D(x, y, z)
         return side
 
     def contains(self, x: float, y: float, z: float) -> bool:
@@ -112,35 +109,27 @@ def draw_octree_lib(point_cloud: np.ndarray) -> None:
     o3d.visualization.draw_geometries([coords, octree, sphere_mesh])
 
 
-def draw_octree_cube(ax: plt.axes.Axes, cube_dict: dict, point_cloud: np.ndarray, depth=None):
+def draw_octree_cube(ax, cube_dict: dict, point_cloud: np.ndarray, depth=None):
     if depth == None:
         depth = 0
+
+    node = Node(cube_dict)
+    node.draw_box(ax)
+
     displacement = cube_dict["finish"][0] + cube_dict["start"][0] / 2
 
-    cube = Cube(cube_dict)
-    cube.draw_cube(ax)
     for point in point_cloud:
-        if cube.contains(point[0], point[1], point[2]) and depth <= 3:
-            print(depth)
+        if node.contains(point[0], point[1], point[2]) and depth <= 3:
             depth += 1
             cube_dict["finish"] = [displacement, displacement, displacement]
-            print(cube_dict)
-            # draw_octree_cube(ax, cube_dict, point_cloud, depth)
-            # cube_dict["start"] = cube_dict["finish"]
-            # cube_dict["finish"] = initial_finish
-
-            # draw_octree_cube(ax, cube_dict, point_cloud, depth)
-            # draw_octree_cube(ax, cube_dict, point_cloud)
-            # draw_octree_cube(ax, cube_dict, point_cloud)
-            # draw_octree_cube(ax, cube_dict, point_cloud)
-            # draw_octree_cube(ax, cube_dict, point_cloud)
-            # draw_octree_cube(ax, cube_dict, point_cloud)
-            # draw_octree_cube(ax, cube_dict, point_cloud)
-
             return draw_octree_cube(ax, cube_dict, point_cloud, depth)
+    # TODO: 8 nodes should be drawn with different locations based on displacement
+    # The search of points in the node should be done by going through the whole list and only then breaking the branch
+    # recursion is done until there are no more points left in the node or depth threshold is reached
+    # if depth reached the threshold and there are still points in the node, the node should be colored
 
 
-def draw_octree(filename: str, ax: plt.axes.Axes):
+def draw_octree(filename: str, ax):
     point_cloud, minimal_values, maximal_values = read_data(filename)
     x_min = minimal_values[0]
     y_min = minimal_values[1]
@@ -152,7 +141,7 @@ def draw_octree(filename: str, ax: plt.axes.Axes):
     draw_octree_cube(ax, cube_dict, point_cloud)
 
 
-fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-draw_octree("2743_1234.las", ax)
-
-plt.show()
+if __name__ == "__main__":
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    draw_octree("2743_1234.las", ax)
+    plt.show()
