@@ -1,4 +1,5 @@
 import math
+from typing import Dict, Deque
 import open3d as o3d
 import numpy as np
 import laspy
@@ -7,10 +8,10 @@ import matplotlib.pyplot as plt
 
 
 class Cube:
-    def __init__(self, cube_dict) -> None:
+    def __init__(self, cube_dict: Dict[str, list]) -> None:
         self.cube_dict = cube_dict
 
-    def draw_cube(self, ax) -> None:
+    def draw_cube(self, ax: plt.axes.Axes) -> None:
         xs = self.cube_dict["start"][0]
         ys = self.cube_dict["start"][1]
         zs = self.cube_dict["start"][2]
@@ -18,22 +19,41 @@ class Cube:
         yf = self.cube_dict["finish"][1]
         zf = self.cube_dict["finish"][2]
 
-        a = np.max([xf - xs, yf - ys, zf - zs])
+        side = np.max([xf - xs, yf - ys, zf - zs])
 
-        p1 = [xs, ys, zs]
-        p2 = [xs + a, ys, zs]
-        p3 = [xs + a, ys + a, zs]
-        p4 = [xs, ys + a, zs]
-        p5 = [xs, ys, zs + a]
-        p6 = [xs + a, ys, zs + a]
-        p7 = [xs + a, ys + a, zs + a]
-        p8 = [xs, ys + a, zs + a]
+        point_1 = [xs, ys, zs]
+        point_2 = [xs + side, ys, zs]
+        point_3 = [xs + side, ys + side, zs]
+        point_4 = [xs, ys + side, zs]
+        point_5 = [xs, ys, zs + side]
+        point_6 = [xs + side, ys, zs + side]
+        point_7 = [xs + side, ys + side, zs + side]
+        point_8 = [xs, ys + side, zs + side]
 
         x = []
         y = []
         z = []
-        list_of_movements = [p1, p2, p3, p4, p1, p5, p6, p7, p8, p5, p8, p4, p3, p7, p3, p2, p6]
-        for point in list_of_movements:
+
+        order_of_movements = [
+            point_1,
+            point_2,
+            point_3,
+            point_4,
+            point_1,
+            point_5,
+            point_6,
+            point_7,
+            point_8,
+            point_5,
+            point_8,
+            point_4,
+            point_3,
+            point_7,
+            point_3,
+            point_2,
+            point_6,
+        ]
+        for point in order_of_movements:
             x.append(point[0])
             y.append(point[1])
             z.append(point[2])
@@ -42,6 +62,7 @@ class Cube:
         s = np.array(y)
         t = np.array(z)
         ax.plot3D(r, s, t)
+        return side
 
     def contains(self, x: float, y: float, z: float) -> bool:
         return (
@@ -66,8 +87,8 @@ class Sphere:
         return distance <= self.r
 
 
-def limit_sphere(sphere: Sphere, point_cloud):
-    lists = deque()
+def limit_sphere(sphere: Sphere, point_cloud: np.ndarray):
+    lists: Deque = deque()
     for point in point_cloud:
         if sphere.contains(point[0], point[1], point[2]):
             lists.append(point)
@@ -81,7 +102,7 @@ def read_data(filename: str):
     return point_data, point_data.min(axis=0), point_data.max(axis=0)
 
 
-def draw_octree_lib(point_cloud: list) -> None:
+def draw_octree_lib(point_cloud: np.ndarray) -> None:
     geom = o3d.geometry.PointCloud()
     geom.points = o3d.utility.Vector3dVector(point_cloud)
     octree = o3d.geometry.Octree(max_depth=6)
@@ -91,27 +112,24 @@ def draw_octree_lib(point_cloud: list) -> None:
     o3d.visualization.draw_geometries([coords, octree, sphere_mesh])
 
 
-def draw_octree_cube(ax, cube_dict: dict, point_cloud, depth=None):
+def draw_octree_cube(ax: plt.axes.Axes, cube_dict: dict, point_cloud: np.ndarray, depth=None):
     if depth == None:
         depth = 0
-    initial_start = cube_dict["start"]
-    initial_finish = cube_dict["finish"]
+    displacement = cube_dict["finish"][0] + cube_dict["start"][0] / 2
+
     cube = Cube(cube_dict)
     cube.draw_cube(ax)
     for point in point_cloud:
         if cube.contains(point[0], point[1], point[2]) and depth <= 3:
             print(depth)
             depth += 1
-            cube_dict["finish"] = [
-                (cube_dict["finish"][0] + cube_dict["start"][0]) / 2,
-                (cube_dict["finish"][1] + cube_dict["start"][1]) / 2,
-                (cube_dict["finish"][2] + cube_dict["start"][2]) / 2,
-            ]
-            # draw_octree_cube(ax, cube_dict, point_cloud)
+            cube_dict["finish"] = [displacement, displacement, displacement]
+            print(cube_dict)
+            # draw_octree_cube(ax, cube_dict, point_cloud, depth)
             # cube_dict["start"] = cube_dict["finish"]
             # cube_dict["finish"] = initial_finish
 
-            # draw_octree_cube(ax, cube_dict, point_cloud)
+            # draw_octree_cube(ax, cube_dict, point_cloud, depth)
             # draw_octree_cube(ax, cube_dict, point_cloud)
             # draw_octree_cube(ax, cube_dict, point_cloud)
             # draw_octree_cube(ax, cube_dict, point_cloud)
@@ -120,10 +138,9 @@ def draw_octree_cube(ax, cube_dict: dict, point_cloud, depth=None):
             # draw_octree_cube(ax, cube_dict, point_cloud)
 
             return draw_octree_cube(ax, cube_dict, point_cloud, depth)
-    return
 
 
-def draw_octree(filename: str, ax):
+def draw_octree(filename: str, ax: plt.axes.Axes):
     point_cloud, minimal_values, maximal_values = read_data(filename)
     x_min = minimal_values[0]
     y_min = minimal_values[1]
