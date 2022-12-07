@@ -124,6 +124,7 @@ def draw_octree_cube(ax, cube_dict: dict, point_cloud: np.ndarray, depth=None):
             cube_dict["finish"] = [displacement, displacement, displacement]
             return draw_octree_cube(ax, cube_dict, point_cloud, depth)
     # TODO: 8 nodes should be drawn with different locations based on displacement
+    # The area needs to be limited by a sphere before beginning the search
     # The search of points in the node should be done by going through the whole list and only then breaking the branch
     # recursion is done until there are no more points left in the node or depth threshold is reached
     # if depth reached the threshold and there are still points in the node, the node should be colored
